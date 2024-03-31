@@ -7,6 +7,7 @@
 
 #[cfg(feature = "bevy_animation")]
 use bevy_animation::AnimationClip;
+use bevy_core::Name;
 use bevy_utils::HashMap;
 
 mod loader;
@@ -19,7 +20,7 @@ use bevy_ecs::{prelude::Component, reflect::ReflectComponent};
 use bevy_pbr::StandardMaterial;
 use bevy_reflect::{Reflect, TypePath};
 use bevy_render::{
-    mesh::{Mesh, MeshVertexAttribute},
+    mesh::{skinning::SkinnedMeshInverseBindposes, Mesh, MeshVertexAttribute},
     renderer::RenderDevice,
     texture::CompressedImageFormats,
 };
@@ -55,6 +56,7 @@ impl Plugin for GltfPlugin {
             .init_asset::<GltfNode>()
             .init_asset::<GltfPrimitive>()
             .init_asset::<GltfMesh>()
+            .init_asset::<GltfSkin>()
             .preregister_asset_loader::<GltfLoader>(&["gltf", "glb"]);
     }
 
@@ -90,6 +92,10 @@ pub struct Gltf {
     pub nodes: Vec<Handle<GltfNode>>,
     /// Named nodes loaded from the glTF file.
     pub named_nodes: HashMap<String, Handle<GltfNode>>,
+    /// All skins loaded from the glTF file.
+    pub skins: Vec<Handle<GltfSkin>>,
+    /// Named skins loaded from the glTF file.
+    pub named_skins: HashMap<String, Handle<GltfSkin>>,
     /// Default scene to be displayed.
     pub default_scene: Option<Handle<Scene>>,
     /// All animations loaded from the glTF file.
@@ -101,17 +107,38 @@ pub struct Gltf {
 }
 
 /// A glTF node with all of its child nodes, its [`GltfMesh`],
-/// [`Transform`](bevy_transform::prelude::Transform) and an optional [`GltfExtras`].
+/// [`Transform`](bevy_transform::prelude::Transform), it's optional [`GltfSkin`]
+/// and an optional [`GltfExtras`].
 ///
 /// See [the relevant glTF specification section](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#reference-node).
 #[derive(Asset, Debug, Clone, TypePath)]
 pub struct GltfNode {
+    /// Name of the node (used in animation)
+    pub name: Name,
     /// Direct children of the node.
-    pub children: Vec<GltfNode>,
+    pub children: Vec<Handle<GltfNode>>,
     /// Mesh of the node.
     pub mesh: Option<Handle<GltfMesh>>,
+    /// Skin of the node.
+    pub skin: Option<Handle<GltfSkin>>,
     /// Local transform.
     pub transform: bevy_transform::prelude::Transform,
+    /// Additional data.
+    pub extras: Option<GltfExtras>,
+    /// Is this node used as an animation root
+    pub is_animation_root: bool,
+}
+
+/// A glTF skin with all of its joint nodes, [`SkinnedMeshInversiveBindposes`](bevy_render::mesh::skinning::SkinnedMeshInverseBindposes)
+/// and an optional [`GltfExtras`].
+///
+/// See [the relevant glTF specification section](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#reference-skin).
+#[derive(Asset, Debug, Clone, TypePath)]
+pub struct GltfSkin {
+    /// All the nodes that form this skin.
+    pub joints: Vec<Handle<GltfNode>>,
+    /// Inverse-bind matricy of this skin.
+    pub inverse_bind_matrices: Handle<SkinnedMeshInverseBindposes>,
     /// Additional data.
     pub extras: Option<GltfExtras>,
 }

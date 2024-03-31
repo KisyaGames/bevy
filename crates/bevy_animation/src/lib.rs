@@ -123,7 +123,7 @@ impl AnimationClip {
 }
 
 /// Repetition behavior of an animation.
-#[derive(Reflect, Copy, Clone, Default)]
+#[derive(Reflect, Debug, Copy, Clone, Default)]
 pub enum RepeatAnimation {
     /// The animation will finish after running once.
     #[default]
